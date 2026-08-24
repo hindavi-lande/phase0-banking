@@ -41,6 +41,9 @@ public class Account {
     @Column(name = "status", nullable = false, length = 20)
     private AccountStatus status;
 
+    @Column(name = "currency_code", nullable = false, length = 3, updatable = false)
+    private String currencyCode;
+
     protected Account() {
         // required by JPA
     }
@@ -50,12 +53,14 @@ public class Account {
             String accountNumber,
             AccountType type,
             BigDecimal balance,
-            AccountStatus status) {
+            AccountStatus status,
+            String currencyCode) {
         this.customer = customer;
         this.accountNumber = accountNumber;
         this.type = type;
         this.balance = balance;
         this.status = status;
+        this.currencyCode = currencyCode;
     }
 
     public UUID getId() {
@@ -100,5 +105,13 @@ public class Account {
 
     public void setStatus(AccountStatus status) {
         this.status = status;
+    }
+
+    public String getCurrencyCode() {
+        return currencyCode;
+    }
+
+    public void setCurrencyCode(String currencyCode) {
+        this.currencyCode = currencyCode;
     }
 }

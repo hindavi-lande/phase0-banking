@@ -45,7 +45,7 @@ class AccountServiceTest {
         customerId = UUID.randomUUID();
         customer = new Customer("Ada", "Lovelace", "ada@example.com", "111", CustomerStatus.ACTIVE);
         request = new AccountRequest(
-                customerId, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                customerId, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE, "USD");
     }
 
     @Test
@@ -60,6 +60,7 @@ class AccountServiceTest {
         assertThat(response.type()).isEqualTo(AccountType.SAVINGS);
         assertThat(response.balance()).isEqualByComparingTo("250.00");
         assertThat(response.status()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(response.currencyCode()).isEqualTo("USD");
         verify(customerService).findOrThrow(customerId);
     }
 
@@ -104,7 +105,7 @@ class AccountServiceTest {
         Customer newCustomer = new Customer("Alan", "Turing", "alan@example.com", "222", CustomerStatus.ACTIVE);
 
         Account existing =
-                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE, "USD");
 
         when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
         when(accountRepository.existsByAccountNumberAndIdNot("ACC-0002", id)).thenReturn(false);
@@ -114,7 +115,7 @@ class AccountServiceTest {
         AccountResponse response = accountService.update(
                 id,
                 new AccountRequest(
-                        newCustomerId, "ACC-0002", AccountType.CURRENT, new BigDecimal("10.50"), AccountStatus.CLOSED));
+                        newCustomerId, "ACC-0002", AccountType.CURRENT, new BigDecimal("10.50"), AccountStatus.CLOSED, "USD"));
 
         assertThat(response.accountNumber()).isEqualTo("ACC-0002");
         assertThat(response.type()).isEqualTo(AccountType.CURRENT);
@@ -124,10 +125,30 @@ class AccountServiceTest {
     }
 
     @Test
+    void updateIgnoresCurrencyCodeChange() {
+        UUID id = UUID.randomUUID();
+        Account existing =
+                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE, "USD");
+
+        when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(accountRepository.existsByAccountNumberAndIdNot("ACC-0001", id)).thenReturn(false);
+        when(customerService.findOrThrow(customerId)).thenReturn(customer);
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AccountResponse response = accountService.update(
+                id,
+                new AccountRequest(
+                        customerId, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE, "EUR"));
+
+        assertThat(response.currencyCode()).isEqualTo("USD");
+        assertThat(existing.getCurrencyCode()).isEqualTo("USD");
+    }
+
+    @Test
     void deleteRemovesAccount() {
         UUID id = UUID.randomUUID();
         Account existing =
-                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE, "USD");
         when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
 
         accountService.delete(id);

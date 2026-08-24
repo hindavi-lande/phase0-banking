@@ -53,15 +53,21 @@ class AccountControllerIntegrationTest {
     }
 
     private static String accountJson(UUID customerId, String number, String type, String balance, String status) {
+        return accountJson(customerId, number, type, balance, status, "USD");
+    }
+
+    private static String accountJson(
+            UUID customerId, String number, String type, String balance, String status, String currencyCode) {
         return """
                 {
                   "customerId": "%s",
                   "accountNumber": "%s",
                   "type": "%s",
                   "balance": %s,
-                  "status": "%s"
+                  "status": "%s",
+                  "currencyCode": "%s"
                 }
-                """.formatted(customerId, number, type, balance, status);
+                """.formatted(customerId, number, type, balance, status, currencyCode);
     }
 
     @Test
@@ -76,6 +82,7 @@ class AccountControllerIntegrationTest {
                 .andExpect(jsonPath("$.type").value("SAVINGS"))
                 .andExpect(jsonPath("$.balance").value(250.00))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.currencyCode").value("USD"))
                 .andReturn();
 
         String id = objectMapper
@@ -138,6 +145,15 @@ class AccountControllerIntegrationTest {
     }
 
     @Test
+    void malformedCurrencyCodeReturns400() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-0005", "SAVINGS", "0.00", "ACTIVE", "USDX")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.currencyCode").exists());
+    }
+
+    @Test
     void duplicateAccountNumberReturns409() throws Exception {
         mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -148,6 +164,30 @@ class AccountControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(accountJson(customerId, "ACC-DUP", "CURRENT", "0.00", "ACTIVE")))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void updatingCurrencyCodeIsIgnored() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-CUR", "SAVINGS", "0.00", "ACTIVE", "USD")))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String id = objectMapper
+                .readTree(created.getResponse().getContentAsString())
+                .get("id")
+                .asText();
+
+        mockMvc.perform(put("/api/accounts/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-CUR", "CURRENT", "0.00", "ACTIVE", "EUR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currencyCode").value("USD"));
+
+        mockMvc.perform(get("/api/accounts/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currencyCode").value("USD"));
     }
 
     @Test

@@ -37,7 +37,8 @@ public class AccountService {
                 request.accountNumber(),
                 request.type(),
                 request.balance(),
-                request.status());
+                request.status(),
+                request.currencyCode());
 
         return AccountResponse.from(accountRepository.save(account));
     }
@@ -67,6 +68,7 @@ public class AccountService {
         account.setType(request.type());
         account.setBalance(request.balance());
         account.setStatus(request.status());
+        // currencyCode is immutable after creation; ignore any value supplied on update.
 
         return AccountResponse.from(accountRepository.save(account));
     }
