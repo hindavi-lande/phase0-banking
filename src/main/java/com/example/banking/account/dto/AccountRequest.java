@@ -26,6 +26,10 @@ public record AccountRequest(
         @Digits(integer = 17, fraction = 2, message = "balance must have at most 2 decimal places")
         BigDecimal balance,
 
+        @NotBlank(message = "currency is required")
+        @Size(min = 3, max = 3, message = "currency must be a 3-letter ISO-4217 code")
+        String currency,
+
         @NotNull(message = "status is required")
         AccountStatus status) {
 }

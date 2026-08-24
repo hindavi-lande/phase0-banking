@@ -52,29 +52,32 @@ class AccountControllerIntegrationTest {
         customerId = customer.getId();
     }
 
-    private static String accountJson(UUID customerId, String number, String type, String balance, String status) {
+    private static String accountJson(
+            UUID customerId, String number, String type, String balance, String currency, String status) {
         return """
                 {
                   "customerId": "%s",
                   "accountNumber": "%s",
                   "type": "%s",
                   "balance": %s,
+                  "currency": "%s",
                   "status": "%s"
                 }
-                """.formatted(customerId, number, type, balance, status);
+                """.formatted(customerId, number, type, balance, currency, status);
     }
 
     @Test
     void fullCrudLifecycleAcrossTheForeignKey() throws Exception {
         MvcResult created = mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-0001", "SAVINGS", "250.00", "ACTIVE")))
+                        .content(accountJson(customerId, "ACC-0001", "SAVINGS", "250.00", "USD", "ACTIVE")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.customerId").value(customerId.toString()))
                 .andExpect(jsonPath("$.accountNumber").value("ACC-0001"))
                 .andExpect(jsonPath("$.type").value("SAVINGS"))
                 .andExpect(jsonPath("$.balance").value(250.00))
+                .andExpect(jsonPath("$.currency").value("USD"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andReturn();
 
@@ -86,7 +89,8 @@ class AccountControllerIntegrationTest {
         mockMvc.perform(get("/api/accounts/{id}", id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.customerId").value(customerId.toString()))
-                .andExpect(jsonPath("$.accountNumber").value("ACC-0001"));
+                .andExpect(jsonPath("$.accountNumber").value("ACC-0001"))
+                .andExpect(jsonPath("$.currency").value("USD"));
 
         mockMvc.perform(get("/api/accounts"))
                 .andExpect(status().isOk())
@@ -94,11 +98,12 @@ class AccountControllerIntegrationTest {
 
         mockMvc.perform(put("/api/accounts/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-0002", "CURRENT", "10.50", "CLOSED")))
+                        .content(accountJson(customerId, "ACC-0002", "CURRENT", "10.50", "EUR", "CLOSED")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accountNumber").value("ACC-0002"))
                 .andExpect(jsonPath("$.type").value("CURRENT"))
                 .andExpect(jsonPath("$.balance").value(10.50))
+                .andExpect(jsonPath("$.currency").value("EUR"))
                 .andExpect(jsonPath("$.status").value("CLOSED"));
 
         mockMvc.perform(delete("/api/accounts/{id}", id)).andExpect(status().isNoContent());
@@ -115,6 +120,7 @@ class AccountControllerIntegrationTest {
                                 "ACC-9999",
                                 "SAVINGS",
                                 "0.00",
+                                "USD",
                                 "ACTIVE")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Customer not found")));
@@ -124,7 +130,7 @@ class AccountControllerIntegrationTest {
     void negativeBalanceReturns400() throws Exception {
         mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-0003", "SAVINGS", "-1.00", "ACTIVE")))
+                        .content(accountJson(customerId, "ACC-0003", "SAVINGS", "-1.00", "USD", "ACTIVE")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.balance").exists());
     }
@@ -133,20 +139,38 @@ class AccountControllerIntegrationTest {
     void unknownEnumValueReturns400() throws Exception {
         mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-0004", "FIXED_DEPOSIT", "0.00", "ACTIVE")))
+                        .content(accountJson(customerId, "ACC-0004", "FIXED_DEPOSIT", "0.00", "USD", "ACTIVE")))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void missingCurrencyReturns400() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-0005", "SAVINGS", "0.00", "", "ACTIVE")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.currency").exists());
+    }
+
+    @Test
+    void invalidLengthCurrencyReturns400() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-0006", "SAVINGS", "0.00", "US", "ACTIVE")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.currency").exists());
     }
 
     @Test
     void duplicateAccountNumberReturns409() throws Exception {
         mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-DUP", "SAVINGS", "0.00", "ACTIVE")))
+                        .content(accountJson(customerId, "ACC-DUP", "SAVINGS", "0.00", "USD", "ACTIVE")))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-DUP", "CURRENT", "0.00", "ACTIVE")))
+                        .content(accountJson(customerId, "ACC-DUP", "CURRENT", "0.00", "USD", "ACTIVE")))
                 .andExpect(status().isConflict());
     }
 
@@ -154,7 +178,7 @@ class AccountControllerIntegrationTest {
     void deletingCustomerWithAccountsReturns409() throws Exception {
         mockMvc.perform(post("/api/accounts")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(accountJson(customerId, "ACC-LINKED", "SAVINGS", "0.00", "ACTIVE")))
+                        .content(accountJson(customerId, "ACC-LINKED", "SAVINGS", "0.00", "USD", "ACTIVE")))
                 .andExpect(status().isCreated());
 
         mockMvc.perform(delete("/api/customers/{id}", customerId))

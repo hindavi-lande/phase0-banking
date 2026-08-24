@@ -15,24 +15,25 @@ capabilities, no search — deliberately.
 
 ## Run
 
-```bash
+bash
 mvn spring-boot:run          # http://localhost:8080
 mvn test                     # 24 tests
 mvn clean package            # executable jar in target/
-```
+
 
 H2 console: <http://localhost:8080/h2-console> (JDBC URL `jdbc:h2:mem:banking`, user `sa`, empty password).
 
 ## Domain
 
-```
+
 Customer 1 ──── * Account
-```
+
 
 **Customer** — `id`, `firstName`, `lastName`, `email` (unique), `phone`, `status` (`ACTIVE` | `INACTIVE`)
 
 **Account** — `id`, `customerId` (FK → Customer, required), `accountNumber` (unique),
-`type` (`SAVINGS` | `CURRENT`), `balance` (non-negative, 2 dp), `status` (`ACTIVE` | `CLOSED`)
+`type` (`SAVINGS` | `CURRENT`), `balance` (non-negative, 2 dp), `currency` (required,
+ISO-4217 3-letter code, e.g. `USD`), `status` (`ACTIVE` | `CLOSED`)
 
 The FK is mapped as a lazy `@ManyToOne` on `Account`; the wire format exposes it as a
 flat `customerId` so responses never leak the entity graph.
@@ -51,7 +52,7 @@ Both resources expose the same five operations.
 
 ### Example
 
-```bash
+bash
 CUSTOMER=$(curl -s -X POST localhost:8080/api/customers \
   -H 'Content-Type: application/json' \
   -d '{"firstName":"Ada","lastName":"Lovelace","email":"ada@example.com","phone":"+44 20 7946 0958","status":"ACTIVE"}')
@@ -60,14 +61,14 @@ ID=$(echo "$CUSTOMER" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
 curl -s -X POST localhost:8080/api/accounts \
   -H 'Content-Type: application/json' \
-  -d "{\"customerId\":\"$ID\",\"accountNumber\":\"ACC-0001\",\"type\":\"SAVINGS\",\"balance\":250.00,\"status\":\"ACTIVE\"}"
-```
+  -d "{\"customerId\":\"$ID\",\"accountNumber\":\"ACC-0001\",\"type\":\"SAVINGS\",\"balance\":250.00,\"currency\":\"USD\",\"status\":\"ACTIVE\"}"
+
 
 ## Errors
 
 Every handled failure returns the same body, so clients parse one shape:
 
-```json
+
 {
   "timestamp": "2026-08-21T07:39:00Z",
   "status": 400,
@@ -75,7 +76,7 @@ Every handled failure returns the same body, so clients parse one shape:
   "message": "Validation failed",
   "fieldErrors": { "email": "email must be a valid address" }
 }
-```
+
 
 | Status | Cause |
 |---|---|
@@ -88,13 +89,13 @@ surfaces as a `409` instead of a `500`.
 
 ## Layout
 
-```
+
 com.example.banking
 ├── BankingApplication.java
 ├── common/          ApiError, GlobalExceptionHandler, 3 exception types
 ├── customer/        entity, enum, repository, service, controller, dto/
 └── account/         entity, 2 enums, repository, service, controller, dto/
-```
+
 
 Each slice is self-contained; `AccountService` resolves the FK through
 `CustomerService.findOrThrow`, which is the single place the `Customer` 404 is raised.

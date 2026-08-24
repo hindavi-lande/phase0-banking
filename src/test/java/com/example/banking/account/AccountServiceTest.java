@@ -45,7 +45,7 @@ class AccountServiceTest {
         customerId = UUID.randomUUID();
         customer = new Customer("Ada", "Lovelace", "ada@example.com", "111", CustomerStatus.ACTIVE);
         request = new AccountRequest(
-                customerId, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                customerId, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), "USD", AccountStatus.ACTIVE);
     }
 
     @Test
@@ -59,6 +59,7 @@ class AccountServiceTest {
         assertThat(response.accountNumber()).isEqualTo("ACC-0001");
         assertThat(response.type()).isEqualTo(AccountType.SAVINGS);
         assertThat(response.balance()).isEqualByComparingTo("250.00");
+        assertThat(response.currency()).isEqualTo("USD");
         assertThat(response.status()).isEqualTo(AccountStatus.ACTIVE);
         verify(customerService).findOrThrow(customerId);
     }
@@ -104,7 +105,7 @@ class AccountServiceTest {
         Customer newCustomer = new Customer("Alan", "Turing", "alan@example.com", "222", CustomerStatus.ACTIVE);
 
         Account existing =
-                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), "USD", AccountStatus.ACTIVE);
 
         when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
         when(accountRepository.existsByAccountNumberAndIdNot("ACC-0002", id)).thenReturn(false);
@@ -114,11 +115,12 @@ class AccountServiceTest {
         AccountResponse response = accountService.update(
                 id,
                 new AccountRequest(
-                        newCustomerId, "ACC-0002", AccountType.CURRENT, new BigDecimal("10.50"), AccountStatus.CLOSED));
+                        newCustomerId, "ACC-0002", AccountType.CURRENT, new BigDecimal("10.50"), "EUR", AccountStatus.CLOSED));
 
         assertThat(response.accountNumber()).isEqualTo("ACC-0002");
         assertThat(response.type()).isEqualTo(AccountType.CURRENT);
         assertThat(response.balance()).isEqualByComparingTo("10.50");
+        assertThat(response.currency()).isEqualTo("EUR");
         assertThat(response.status()).isEqualTo(AccountStatus.CLOSED);
         assertThat(existing.getCustomer()).isSameAs(newCustomer);
     }
@@ -127,7 +129,7 @@ class AccountServiceTest {
     void deleteRemovesAccount() {
         UUID id = UUID.randomUUID();
         Account existing =
-                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), "USD", AccountStatus.ACTIVE);
         when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
 
         accountService.delete(id);

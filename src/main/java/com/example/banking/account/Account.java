@@ -37,6 +37,9 @@ public class Account {
     @Column(name = "balance", nullable = false, precision = 19, scale = 2)
     private BigDecimal balance;
 
+    @Column(name = "currency", nullable = false, length = 3)
+    private String currency;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private AccountStatus status;
@@ -50,11 +53,13 @@ public class Account {
             String accountNumber,
             AccountType type,
             BigDecimal balance,
+            String currency,
             AccountStatus status) {
         this.customer = customer;
         this.accountNumber = accountNumber;
         this.type = type;
         this.balance = balance;
+        this.currency = currency;
         this.status = status;
     }
 
@@ -92,6 +97,14 @@ public class Account {
 
     public void setBalance(BigDecimal balance) {
         this.balance = balance;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
     public AccountStatus getStatus() {

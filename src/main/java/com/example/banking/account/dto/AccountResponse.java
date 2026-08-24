@@ -12,6 +12,7 @@ public record AccountResponse(
         String accountNumber,
         AccountType type,
         BigDecimal balance,
+        String currency,
         AccountStatus status) {
 
     public static AccountResponse from(Account account) {
@@ -21,6 +22,7 @@ public record AccountResponse(
                 account.getAccountNumber(),
                 account.getType(),
                 account.getBalance(),
+                account.getCurrency(),
                 account.getStatus());
     }
 }

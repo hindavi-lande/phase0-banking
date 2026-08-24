@@ -37,6 +37,7 @@ public class AccountService {
                 request.accountNumber(),
                 request.type(),
                 request.balance(),
+                request.currency(),
                 request.status());
 
         return AccountResponse.from(accountRepository.save(account));
@@ -66,6 +67,7 @@ public class AccountService {
         account.setAccountNumber(request.accountNumber());
         account.setType(request.type());
         account.setBalance(request.balance());
+        account.setCurrency(request.currency());
         account.setStatus(request.status());
 
         return AccountResponse.from(accountRepository.save(account));
