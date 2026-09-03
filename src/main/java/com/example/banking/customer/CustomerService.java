@@ -49,6 +49,16 @@ public class CustomerService {
                 .toList();
     }
 
+    public List<CustomerResponse> search(String query) {
+        if (query == null || query.isBlank()) {
+            return list();
+        }
+
+        return customerRepository.searchByNameOrEmail(query).stream()
+                .map(CustomerResponse::from)
+                .toList();
+    }
+
     @Transactional
     public CustomerResponse update(UUID id, CustomerRequest request) {
         Customer customer = findOrThrow(id);

@@ -140,4 +140,70 @@ class CustomerControllerIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409));
     }
+
+    private void seedSearchCustomers() throws Exception {
+        mockMvc.perform(post("/api/customers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "Ada",
+                                  "lastName": "Lovelace",
+                                  "email": "ada.lovelace@example.com",
+                                  "phone": "+44 20 7946 0958",
+                                  "status": "ACTIVE"
+                                }
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/customers")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "Grace",
+                                  "lastName": "Hopper",
+                                  "email": "grace.hopper@example.com",
+                                  "phone": "555-0100",
+                                  "status": "ACTIVE"
+                                }
+                                """))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void searchByPartialCaseMixedFirstNameReturnsOnlyMatchingCustomer() throws Exception {
+        seedSearchCustomers();
+
+        mockMvc.perform(get("/api/customers/search").param("q", "aDa"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(hasSize(1)))
+                .andExpect(jsonPath("$[0].firstName").value("Ada"));
+    }
+
+    @Test
+    void searchByPartialEmailReturnsMatchingCustomer() throws Exception {
+        seedSearchCustomers();
+
+        mockMvc.perform(get("/api/customers/search").param("q", "hopper@example"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(hasSize(1)))
+                .andExpect(jsonPath("$[0].lastName").value("Hopper"));
+    }
+
+    @Test
+    void searchWithNoMatchReturnsEmptyArray() throws Exception {
+        seedSearchCustomers();
+
+        mockMvc.perform(get("/api/customers/search").param("q", "nonexistent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(hasSize(0)));
+    }
+
+    @Test
+    void searchWithoutQueryParamReturnsAllCustomers() throws Exception {
+        seedSearchCustomers();
+
+        mockMvc.perform(get("/api/customers/search"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value(hasSize(2)));
+    }
 }
