@@ -6,6 +6,7 @@ import com.example.banking.common.DuplicateResourceException;
 import com.example.banking.common.ResourceNotFoundException;
 import com.example.banking.customer.Customer;
 import com.example.banking.customer.CustomerService;
+import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @Transactional(readOnly = true)
 public class AccountService {
+
+    private static final Currency DEFAULT_CURRENCY = Currency.getInstance("USD");
 
     private final AccountRepository accountRepository;
     private final CustomerService customerService;
@@ -37,7 +40,8 @@ public class AccountService {
                 request.accountNumber(),
                 request.type(),
                 request.balance(),
-                request.status());
+                request.status(),
+                request.currency() != null ? request.currency() : DEFAULT_CURRENCY);
 
         return AccountResponse.from(accountRepository.save(account));
     }
@@ -67,6 +71,7 @@ public class AccountService {
         account.setType(request.type());
         account.setBalance(request.balance());
         account.setStatus(request.status());
+        account.setCurrency(request.currency() != null ? request.currency() : DEFAULT_CURRENCY);
 
         return AccountResponse.from(accountRepository.save(account));
     }

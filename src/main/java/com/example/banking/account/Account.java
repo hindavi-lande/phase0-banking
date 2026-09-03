@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.UUID;
 
 @Entity
@@ -41,6 +42,9 @@ public class Account {
     @Column(name = "status", nullable = false, length = 20)
     private AccountStatus status;
 
+    @Column(name = "currency_code", nullable = false, length = 3)
+    private Currency currency;
+
     protected Account() {
         // required by JPA
     }
@@ -50,12 +54,14 @@ public class Account {
             String accountNumber,
             AccountType type,
             BigDecimal balance,
-            AccountStatus status) {
+            AccountStatus status,
+            Currency currency) {
         this.customer = customer;
         this.accountNumber = accountNumber;
         this.type = type;
         this.balance = balance;
         this.status = status;
+        this.currency = currency;
     }
 
     public UUID getId() {
@@ -100,5 +106,13 @@ public class Account {
 
     public void setStatus(AccountStatus status) {
         this.status = status;
+    }
+
+    public Currency getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(Currency currency) {
+        this.currency = currency;
     }
 }

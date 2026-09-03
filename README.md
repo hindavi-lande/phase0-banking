@@ -17,7 +17,7 @@ capabilities, no search — deliberately.
 
 ```bash
 mvn spring-boot:run          # http://localhost:8080
-mvn test                     # 24 tests
+mvn test                     # 28 tests
 mvn clean package            # executable jar in target/
 ```
 
@@ -32,7 +32,8 @@ Customer 1 ──── * Account
 **Customer** — `id`, `firstName`, `lastName`, `email` (unique), `phone`, `status` (`ACTIVE` | `INACTIVE`)
 
 **Account** — `id`, `customerId` (FK → Customer, required), `accountNumber` (unique),
-`type` (`SAVINGS` | `CURRENT`), `balance` (non-negative, 2 dp), `status` (`ACTIVE` | `CLOSED`)
+`type` (`SAVINGS` | `CURRENT`), `balance` (non-negative, 2 dp), `status` (`ACTIVE` | `CLOSED`),
+`currency` (ISO 4217 code, e.g. `USD`; defaults to `USD` when omitted on create; mutable via `PUT`)
 
 The FK is mapped as a lazy `@ManyToOne` on `Account`; the wire format exposes it as a
 flat `customerId` so responses never leak the entity graph.
@@ -60,8 +61,10 @@ ID=$(echo "$CUSTOMER" | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
 
 curl -s -X POST localhost:8080/api/accounts \
   -H 'Content-Type: application/json' \
-  -d "{\"customerId\":\"$ID\",\"accountNumber\":\"ACC-0001\",\"type\":\"SAVINGS\",\"balance\":250.00,\"status\":\"ACTIVE\"}"
+  -d "{\"customerId\":\"$ID\",\"accountNumber\":\"ACC-0001\",\"type\":\"SAVINGS\",\"balance\":250.00,\"status\":\"ACTIVE\",\"currency\":\"USD\"}"
 ```
+
+`currency` may be omitted, in which case it defaults to `USD`.
 
 ## Errors
 
@@ -101,7 +104,7 @@ Each slice is self-contained; `AccountService` resolves the FK through
 
 ## Tests
 
-24 tests, all passing:
+28 tests, all passing:
 
 - `BankingApplicationTests` — context loads with both slices wired
 - `CustomerServiceTest`, `AccountServiceTest` — unit tests over mocked repositories

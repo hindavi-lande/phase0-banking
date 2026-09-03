@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.UUID;
 
 public record AccountRequest(
@@ -27,5 +28,7 @@ public record AccountRequest(
         BigDecimal balance,
 
         @NotNull(message = "status is required")
-        AccountStatus status) {
+        AccountStatus status,
+
+        Currency currency) {
 }

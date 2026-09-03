@@ -64,6 +64,20 @@ class AccountControllerIntegrationTest {
                 """.formatted(customerId, number, type, balance, status);
     }
 
+    private static String accountJson(
+            UUID customerId, String number, String type, String balance, String status, String currency) {
+        return """
+                {
+                  "customerId": "%s",
+                  "accountNumber": "%s",
+                  "type": "%s",
+                  "balance": %s,
+                  "status": "%s",
+                  "currency": "%s"
+                }
+                """.formatted(customerId, number, type, balance, status, currency);
+    }
+
     @Test
     void fullCrudLifecycleAcrossTheForeignKey() throws Exception {
         MvcResult created = mockMvc.perform(post("/api/accounts")
@@ -76,6 +90,7 @@ class AccountControllerIntegrationTest {
                 .andExpect(jsonPath("$.type").value("SAVINGS"))
                 .andExpect(jsonPath("$.balance").value(250.00))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.currency").value("USD"))
                 .andReturn();
 
         String id = objectMapper
@@ -99,11 +114,42 @@ class AccountControllerIntegrationTest {
                 .andExpect(jsonPath("$.accountNumber").value("ACC-0002"))
                 .andExpect(jsonPath("$.type").value("CURRENT"))
                 .andExpect(jsonPath("$.balance").value(10.50))
-                .andExpect(jsonPath("$.status").value("CLOSED"));
+                .andExpect(jsonPath("$.status").value("CLOSED"))
+                .andExpect(jsonPath("$.currency").value("USD"));
 
         mockMvc.perform(delete("/api/accounts/{id}", id)).andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/accounts/{id}", id)).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void createWithoutCurrencyDefaultsToUsd() throws Exception {
+        mockMvc.perform(post("/api/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-0006", "SAVINGS", "50.00", "ACTIVE")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.currency").value("USD"));
+    }
+
+    @Test
+    void createWithCurrencyRoundTripsAndPutCanChangeIt() throws Exception {
+        MvcResult created = mockMvc.perform(post("/api/accounts")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-0007", "SAVINGS", "50.00", "ACTIVE", "EUR")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.currency").value("EUR"))
+                .andReturn();
+
+        String id = objectMapper
+                .readTree(created.getResponse().getContentAsString())
+                .get("id")
+                .asText();
+
+        mockMvc.perform(put("/api/accounts/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(accountJson(customerId, "ACC-0007", "SAVINGS", "50.00", "ACTIVE", "GBP")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currency").value("GBP"));
     }
 
     @Test

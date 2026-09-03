@@ -4,6 +4,7 @@ import com.example.banking.account.Account;
 import com.example.banking.account.AccountStatus;
 import com.example.banking.account.AccountType;
 import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.UUID;
 
 public record AccountResponse(
@@ -12,7 +13,8 @@ public record AccountResponse(
         String accountNumber,
         AccountType type,
         BigDecimal balance,
-        AccountStatus status) {
+        AccountStatus status,
+        Currency currency) {
 
     public static AccountResponse from(Account account) {
         return new AccountResponse(
@@ -21,6 +23,7 @@ public record AccountResponse(
                 account.getAccountNumber(),
                 account.getType(),
                 account.getBalance(),
-                account.getStatus());
+                account.getStatus(),
+                account.getCurrency());
     }
 }

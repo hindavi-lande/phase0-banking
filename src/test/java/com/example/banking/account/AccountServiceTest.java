@@ -15,6 +15,7 @@ import com.example.banking.customer.Customer;
 import com.example.banking.customer.CustomerService;
 import com.example.banking.customer.CustomerStatus;
 import java.math.BigDecimal;
+import java.util.Currency;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,7 +46,12 @@ class AccountServiceTest {
         customerId = UUID.randomUUID();
         customer = new Customer("Ada", "Lovelace", "ada@example.com", "111", CustomerStatus.ACTIVE);
         request = new AccountRequest(
-                customerId, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+                customerId,
+                "ACC-0001",
+                AccountType.SAVINGS,
+                new BigDecimal("250.00"),
+                AccountStatus.ACTIVE,
+                null);
     }
 
     @Test
@@ -60,7 +66,27 @@ class AccountServiceTest {
         assertThat(response.type()).isEqualTo(AccountType.SAVINGS);
         assertThat(response.balance()).isEqualByComparingTo("250.00");
         assertThat(response.status()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(response.currency()).isEqualTo(Currency.getInstance("USD"));
         verify(customerService).findOrThrow(customerId);
+    }
+
+    @Test
+    void createUsesProvidedCurrencyWhenSpecified() {
+        AccountRequest requestWithCurrency = new AccountRequest(
+                customerId,
+                "ACC-0005",
+                AccountType.SAVINGS,
+                new BigDecimal("100.00"),
+                AccountStatus.ACTIVE,
+                Currency.getInstance("EUR"));
+
+        when(accountRepository.existsByAccountNumber("ACC-0005")).thenReturn(false);
+        when(customerService.findOrThrow(customerId)).thenReturn(customer);
+        when(accountRepository.save(any(Account.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AccountResponse response = accountService.create(requestWithCurrency);
+
+        assertThat(response.currency()).isEqualTo(Currency.getInstance("EUR"));
     }
 
     @Test
@@ -103,8 +129,13 @@ class AccountServiceTest {
         UUID newCustomerId = UUID.randomUUID();
         Customer newCustomer = new Customer("Alan", "Turing", "alan@example.com", "222", CustomerStatus.ACTIVE);
 
-        Account existing =
-                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+        Account existing = new Account(
+                customer,
+                "ACC-0001",
+                AccountType.SAVINGS,
+                new BigDecimal("250.00"),
+                AccountStatus.ACTIVE,
+                Currency.getInstance("USD"));
 
         when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
         when(accountRepository.existsByAccountNumberAndIdNot("ACC-0002", id)).thenReturn(false);
@@ -114,20 +145,31 @@ class AccountServiceTest {
         AccountResponse response = accountService.update(
                 id,
                 new AccountRequest(
-                        newCustomerId, "ACC-0002", AccountType.CURRENT, new BigDecimal("10.50"), AccountStatus.CLOSED));
+                        newCustomerId,
+                        "ACC-0002",
+                        AccountType.CURRENT,
+                        new BigDecimal("10.50"),
+                        AccountStatus.CLOSED,
+                        Currency.getInstance("EUR")));
 
         assertThat(response.accountNumber()).isEqualTo("ACC-0002");
         assertThat(response.type()).isEqualTo(AccountType.CURRENT);
         assertThat(response.balance()).isEqualByComparingTo("10.50");
         assertThat(response.status()).isEqualTo(AccountStatus.CLOSED);
+        assertThat(response.currency()).isEqualTo(Currency.getInstance("EUR"));
         assertThat(existing.getCustomer()).isSameAs(newCustomer);
     }
 
     @Test
     void deleteRemovesAccount() {
         UUID id = UUID.randomUUID();
-        Account existing =
-                new Account(customer, "ACC-0001", AccountType.SAVINGS, new BigDecimal("250.00"), AccountStatus.ACTIVE);
+        Account existing = new Account(
+                customer,
+                "ACC-0001",
+                AccountType.SAVINGS,
+                new BigDecimal("250.00"),
+                AccountStatus.ACTIVE,
+                Currency.getInstance("USD"));
         when(accountRepository.findById(id)).thenReturn(Optional.of(existing));
 
         accountService.delete(id);
